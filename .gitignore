@@ -1,0 +1,33 @@
+# Build artifacts
+**/bin/
+**/obj/
+**/publish/
+**/staging/
+**/dist/
+**/payload.zip
+
+# Local tooling
+_tools/
+_extracted/
+*.sed
+
+# Vendor binaries (download separately)
+vendor/*.exe
+
+# Release output
+*.exe
+!installer/**/*.exe
+
+# Legacy source bundle (local only)
+legacy/
+*.mp4
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vs/
+*.user
+*.suo
+
+# Logs
+*.log
