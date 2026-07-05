@@ -90,7 +90,7 @@ This is expected for unsigned community tools that request administrator access.
 
 ### End users
 
-1. Download `MovieMaker2012-Hebrew-Setup.exe` from [Releases](../../releases)
+1. Download `MovieMaker2012-Hebrew-Setup.exe` from [Releases](https://github.com/liad07/movie-maker-2012-hebrew-installer/releases)
 2. Verify SHA-256 using `MovieMaker2012-Hebrew-Setup.sha256`
 3. Run as Administrator
 4. Complete the wizard:
@@ -104,8 +104,8 @@ This is expected for unsigned community tools that request administrator access.
 ### Developers
 
 ```powershell
-git clone https://github.com/liad07/movie-maker-2012-hebrew.git
-cd movie-maker-2012-hebrew
+git clone https://github.com/liad07/movie-maker-2012-hebrew-installer.git
+cd movie-maker-2012-hebrew-installer
 
 # Place your legally obtained base installer in vendor/
 # Accepted names: Movie Maker 2012.exe / Move Maker 2012.exe
@@ -145,7 +145,7 @@ dist\MovieMaker2012-Hebrew-Setup.sha256
 ## Project Structure
 
 ```text
-movie-maker-2012-hebrew/
+movie-maker-2012-hebrew-installer/
 ├── README.md
 ├── LICENSE
 ├── SECURITY.md
