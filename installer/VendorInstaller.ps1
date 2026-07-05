@@ -1,19 +1,22 @@
+$script:SupportedVendorInstallerName = 'Movie Maker 2012.exe'
+$script:BundledBaseInstallerName = 'MovieMaker2012-Base.exe'
+
+function Get-SupportedVendorInstallerPath {
+    param(
+        [string] $Root
+    )
+
+    return Join-Path $Root (Join-Path 'vendor' $script:SupportedVendorInstallerName)
+}
+
 function Get-VendorInstallerPath {
     param(
         [string] $Root
     )
 
-    $names = @(
-        'Movie Maker 2012.exe',
-        'Move Maker 2012.exe',
-        'wlsetup-all.exe'
-    )
-
-    foreach ($name in $names) {
-        $path = Join-Path $Root (Join-Path 'vendor' $name)
-        if (Test-Path $path) {
-            return $path
-        }
+    $path = Get-SupportedVendorInstallerPath -Root $Root
+    if (Test-Path $path) {
+        return $path
     }
 
     return $null
@@ -26,7 +29,7 @@ function Test-VendorInstallerHash {
     )
 
     if (-not (Test-Path $HashFile)) {
-        return
+        throw 'Missing vendor\installer.sha256. Create it from your verified Movie Maker 2012.exe before building.'
     }
 
     $expected = (Get-Content $HashFile -TotalCount 1).Trim().ToUpperInvariant()

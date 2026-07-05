@@ -1,8 +1,20 @@
+. "$PSScriptRoot\InstallLogger.ps1"
+. "$PSScriptRoot\InstallProgress.ps1"
+. "$PSScriptRoot\ProcessGuard.ps1"
+. "$PSScriptRoot\InstallBackupManager.ps1"
+. "$PSScriptRoot\LocalizationValidator.ps1"
+. "$PSScriptRoot\VendorInstaller.ps1"
+
 class MovieMakerHebrewInstaller {
+    static [string] $InstallerVersion = '1.1.0'
+    static [string] $BaseInstallDirectory = "${env:ProgramFiles(x86)}\Windows Movie Maker"
+    static [string] $BaseSetupArguments = '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-'
+
     [string] $PackageRoot
     [string] $InstallLanguage = 'Hebrew'
     [bool] $SkipSetup = $false
     [string] $HebrewPackRelative = 'hebrew-pack\Windows Live'
+    [InstallBackupManager] $BackupManager
     [string[]] $WindowsLiveCandidates = @(
         "${env:ProgramFiles(x86)}\Windows Live",
         "$env:ProgramFiles\Windows Live"
@@ -12,27 +24,16 @@ class MovieMakerHebrewInstaller {
         'Shared\he',
         'Installer\he'
     )
-    [string[]] $SetupCandidates = @(
-        'MovieMaker2012-Base.exe',
-        'Movie Maker 2012.exe',
-        'Move Maker 2012.exe',
-        'vendor\Movie Maker 2012.exe',
-        'vendor\Move Maker 2012.exe'
-    )
 
     MovieMakerHebrewInstaller([string] $packageRoot, [string] $installLanguage, [bool] $skipSetup) {
         $this.PackageRoot = $packageRoot
         $this.InstallLanguage = $installLanguage
         $this.SkipSetup = $skipSetup
+        $this.BackupManager = [InstallBackupManager]::new([InstallLogger]::SessionId)
     }
 
-    [string] GetLogPath() {
-        return Join-Path $env:TEMP 'MovieMaker2012-Hebrew-Setup.log'
-    }
-
-    [void] WriteLog([string] $message) {
-        $line = ('{0:yyyy-MM-dd HH:mm:ss} {1}' -f (Get-Date), $message)
-        Add-Content -Path $this.GetLogPath() -Value $line
+    [void] WriteLog([string] $message, [string] $step) {
+        [InstallLogger]::Info($message, $step)
     }
 
     [string] FindWindowsLivePath() {
@@ -45,31 +46,35 @@ class MovieMakerHebrewInstaller {
         return $null
     }
 
-    [bool] IsMovieMakerInstalled() {
-        return [bool]$this.FindWindowsLivePath()
-    }
-
     [string] ResolveSetupPath() {
-        foreach ($relativePath in $this.SetupCandidates) {
-            $candidate = Join-Path $this.PackageRoot $relativePath
-            if (Test-Path $candidate) {
-                return $candidate
-            }
+        $bundledPath = Join-Path $this.PackageRoot $script:BundledBaseInstallerName
+        if (Test-Path $bundledPath) {
+            return $bundledPath
         }
 
         return $null
     }
 
-    [void] InstallMovieMaker([string] $installDirectory) {
+    [void] InstallMovieMaker() {
         $setupPath = $this.ResolveSetupPath()
         if (-not $setupPath) {
-            throw 'Base installer was not found.'
+            throw 'Bundled Movie Maker 2012 base installer was not found.'
         }
 
-        $this.WriteLog("Running base installer: $setupPath")
-        $arguments = @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/SP-', "/DIR=`"$installDirectory`"")
-        $process = Start-Process -FilePath $setupPath -ArgumentList $arguments -Wait -PassThru
+        $setupHash = (Get-FileHash $setupPath -Algorithm SHA256).Hash
+        $this.WriteLog("Running verified base installer: $setupPath", 'base-install')
+        $this.WriteLog("Base installer SHA-256: $setupHash", 'base-install')
+        [InstallProgress]::SetStatus('מתקין את Movie Maker...')
 
+        $arguments = @(
+            '/VERYSILENT',
+            '/SUPPRESSMSGBOXES',
+            '/NORESTART',
+            '/SP-',
+            "/DIR=`"$([MovieMakerHebrewInstaller]::BaseInstallDirectory)`""
+        )
+
+        $process = Start-Process -FilePath $setupPath -ArgumentList $arguments -Wait -PassThru
         if ($process.ExitCode -ne 0) {
             throw "Movie Maker setup failed with exit code $($process.ExitCode)"
         }
@@ -90,19 +95,8 @@ class MovieMakerHebrewInstaller {
         return $null
     }
 
-    [void] BackupLocalizationFolder([string] $targetPath) {
-        if (-not (Test-Path $targetPath)) {
-            return
-        }
-
-        $backupRoot = Join-Path $env:TEMP ('MovieMaker2012-he-backup-' + [Guid]::NewGuid().ToString('N'))
-        $backupPath = Join-Path $backupRoot (Split-Path $targetPath -Leaf)
-        New-Item -ItemType Directory -Path $backupPath -Force | Out-Null
-        Copy-Item -Path (Join-Path $targetPath '*') -Destination $backupPath -Recurse -Force
-        $this.WriteLog("Backed up localization folder to: $backupPath")
-    }
-
     [void] ApplyHebrewLocalization([string] $windowsLivePath) {
+        [InstallProgress]::SetStatus('מגבה קבצי שפה קיימים...')
         foreach ($folder in $this.HebrewFolders) {
             $sourcePath = $this.ResolveHebrewSourcePath($folder)
             $targetPath = Join-Path $windowsLivePath $folder
@@ -111,55 +105,79 @@ class MovieMakerHebrewInstaller {
                 throw "Hebrew pack folder not found for: $folder"
             }
 
-            $this.BackupLocalizationFolder($targetPath)
-
             if (-not (Test-Path $targetPath)) {
                 New-Item -ItemType Directory -Path $targetPath -Force | Out-Null
             }
 
-            Copy-Item -Path (Join-Path $sourcePath '*') -Destination $targetPath -Recurse -Force
-            $this.WriteLog("Applied Hebrew localization: $targetPath")
+            foreach ($file in Get-ChildItem -Path $sourcePath -File) {
+                $targetFile = Join-Path $targetPath $file.Name
+                $backupKey = Join-Path $folder $file.Name
+                $this.BackupManager.BackupFile($targetFile, $backupKey)
+            }
         }
-    }
 
-    [void] RemoveHebrewLocalization([string] $windowsLivePath) {
+        $this.BackupManager.SaveManifest()
+        [InstallProgress]::SetStatus('מחיל קבצי עברית...')
+
         foreach ($folder in $this.HebrewFolders) {
+            $sourcePath = $this.ResolveHebrewSourcePath($folder)
             $targetPath = Join-Path $windowsLivePath $folder
-            if (Test-Path $targetPath) {
-                $this.BackupLocalizationFolder($targetPath)
-                Remove-Item -Path $targetPath -Recurse -Force
-                $this.WriteLog("Removed Hebrew localization: $targetPath")
-            }
+            Copy-Item -Path (Join-Path $sourcePath '*') -Destination $targetPath -Recurse -Force
+            $this.WriteLog("Applied Hebrew localization: $targetPath", 'localization')
+        }
+
+        [InstallProgress]::SetStatus('מאמת התקנה...')
+        [LocalizationValidator]::ValidateInstalledFiles($windowsLivePath, $this.PackageRoot)
+        $this.WriteLog('Post-install validation passed.', 'validation')
+    }
+
+    [void] SkipHebrewLocalization([string] $windowsLivePath) {
+        $this.WriteLog('English selected. Existing localization folders were not modified.', 'localization')
+        if (-not (Test-Path (Join-Path $windowsLivePath 'Photo Gallery\MovieMaker.exe'))) {
+            throw 'MovieMaker.exe was not found after installation.'
         }
     }
 
-    [void] Install([string] $installDirectory) {
-        if (-not $this.SkipSetup) {
-            $this.InstallMovieMaker($installDirectory)
-        }
+    [void] Install() {
+        [ProcessGuard]::EnsureNotRunning()
+        [InstallProgress]::Clear()
 
-        $deadline = (Get-Date).AddMinutes(10)
-        $windowsLivePath = $null
-
-        while ((Get-Date) -lt $deadline) {
-            $windowsLivePath = $this.FindWindowsLivePath()
-            if ($windowsLivePath) {
-                break
+        try {
+            if (-not $this.SkipSetup) {
+                [InstallProgress]::SetStatus('מתחיל התקנת בסיס...')
+                $this.InstallMovieMaker()
             }
-            Start-Sleep -Seconds 2
-        }
 
-        if (-not $windowsLivePath) {
-            throw 'Windows Live installation folder was not found after setup'
-        }
+            [InstallProgress]::SetStatus('ממתין ל-Windows Live...')
+            $deadline = (Get-Date).AddMinutes(10)
+            $windowsLivePath = $null
 
-        if ($this.InstallLanguage -eq 'Hebrew') {
-            $this.ApplyHebrewLocalization($windowsLivePath)
-            return
-        }
+            while ((Get-Date) -lt $deadline) {
+                $windowsLivePath = $this.FindWindowsLivePath()
+                if ($windowsLivePath) {
+                    break
+                }
+                Start-Sleep -Seconds 2
+            }
 
-        if ($this.InstallLanguage -eq 'English') {
-            $this.RemoveHebrewLocalization($windowsLivePath)
+            if (-not $windowsLivePath) {
+                throw 'Windows Live installation folder was not found after setup'
+            }
+
+            if ($this.InstallLanguage -eq 'Hebrew') {
+                $this.ApplyHebrewLocalization($windowsLivePath)
+                return
+            }
+
+            $this.SkipHebrewLocalization($windowsLivePath)
+        }
+        catch {
+            [InstallProgress]::SetStatus('משחזר גיבוי...')
+            $this.BackupManager.RestoreAll()
+            throw
+        }
+        finally {
+            [InstallProgress]::Clear()
         }
     }
 }
@@ -175,14 +193,13 @@ function Start-HebrewMovieMakerInstall {
         [string] $PackageRoot = $PSScriptRoot,
         [ValidateSet('Hebrew', 'English')]
         [string] $Language = 'Hebrew',
-        [string] $InstallDirectory = "${env:ProgramFiles(x86)}\Windows Movie Maker",
         [switch] $LocalizationOnly,
         [switch] $NoPrompt
     )
 
     if (-not $NoPrompt -and -not (Test-Administrator)) {
         $entryScript = Join-Path $PSScriptRoot 'Install-HebrewMovieMaker.ps1'
-        $arguments = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -PackageRoot "{1}" -Language {2} -InstallDirectory "{3}"' -f $entryScript, $PackageRoot, $Language, $InstallDirectory
+        $arguments = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -PackageRoot "{1}" -Language {2}' -f $entryScript, $PackageRoot, $Language
         if ($LocalizationOnly.IsPresent) {
             $arguments += ' -LocalizationOnly'
         }
@@ -191,36 +208,42 @@ function Start-HebrewMovieMakerInstall {
     }
 
     try {
+        [InstallLogger]::Initialize([MovieMakerHebrewInstaller]::InstallerVersion)
+        [InstallLogger]::Info('Starting Movie Maker 2012 community installer', 'startup')
+
         $installer = [MovieMakerHebrewInstaller]::new($PackageRoot, $Language, $LocalizationOnly.IsPresent)
-        $installer.WriteLog('Starting Movie Maker 2012 community installer')
-        $installer.Install($InstallDirectory)
+        $installer.Install()
 
         if (-not $NoPrompt) {
             Add-Type -AssemblyName System.Windows.Forms
-            $message = if ($Language -eq 'Hebrew') {
-                'Movie Maker 2012 installed successfully in Hebrew.'
+            if ($Language -eq 'Hebrew') {
+                $message = 'Movie Maker 2012 הותקן בהצלחה בעברית.'
+                $title = 'ההתקנה הושלמה'
             } else {
-                'Movie Maker 2012 installed successfully in English.'
+                $message = 'Movie Maker 2012 installed successfully in English.'
+                $title = 'Installation Complete'
             }
 
             [System.Windows.Forms.MessageBox]::Show(
                 $message,
-                'Installation Complete',
+                $title,
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Information
             ) | Out-Null
         }
     }
     catch {
+        [InstallLogger]::WriteException($_.Exception, 'failure')
         if (-not $NoPrompt) {
             Add-Type -AssemblyName System.Windows.Forms
+            $title = if ($Language -eq 'Hebrew') { 'ההתקנה נכשלה' } else { 'Installation Failed' }
             [System.Windows.Forms.MessageBox]::Show(
                 $_.Exception.Message,
-                'Installation Failed',
+                $title,
                 [System.Windows.Forms.MessageBoxButtons]::OK,
                 [System.Windows.Forms.MessageBoxIcon]::Error
             ) | Out-Null
         }
-        throw
+        exit 1
     }
 }

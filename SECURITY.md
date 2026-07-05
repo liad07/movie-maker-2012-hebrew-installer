@@ -9,7 +9,7 @@
 
 ## Reporting a vulnerability
 
-If you believe you found a security issue in the community installer wrapper, please report it privately:
+If you believe you found a security issue in the community installer wrapper, please report it privately via GitHub Security Advisories on the repository, or contact the maintainer:
 
 - GitHub: [github.com/liad07](https://github.com/liad07)
 
@@ -41,3 +41,7 @@ Get-FileHash .\MovieMaker2012-Hebrew-Setup.exe -Algorithm SHA256
 ## Scope
 
 Security reports related to the discontinued Microsoft Movie Maker product itself are outside the scope of this repository.
+
+## Logs and privacy
+
+Installation logs may contain local file paths, Windows version, machine name, and session identifiers. Review `%TEMP%\MovieMaker2012-Hebrew-Setup.log` before sharing it externally.

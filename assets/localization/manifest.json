@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "files": [
+    { "relativePath": "Installer/he/LangSelectorLang.dll.mui", "sizeBytes": 18632 },
+    { "relativePath": "Installer/he/startuplang.dll.mui", "sizeBytes": 100032 },
+    { "relativePath": "Installer/he/wlsettingslang.dll.mui", "sizeBytes": 19656 },
+    { "relativePath": "Installer/he/wlsres.dll.mui", "sizeBytes": 102088 },
+    { "relativePath": "Photo Gallery/he/MovieMakerLang.dll.mui", "sizeBytes": 215744 },
+    { "relativePath": "Photo Gallery/he/RegRes.dll.mui", "sizeBytes": 19136 },
+    { "relativePath": "Photo Gallery/he/WLFacebookPlugin.resources.dll", "sizeBytes": 73408 },
+    { "relativePath": "Photo Gallery/he/WLFlickrPlugin.resources.dll", "sizeBytes": 28872 },
+    { "relativePath": "Photo Gallery/he/WLVimeoPlugin.resources.dll", "sizeBytes": 114368 },
+    { "relativePath": "Photo Gallery/he/WLXAlbumDownloadWizardResources.dll.mui", "sizeBytes": 1494216 },
+    { "relativePath": "Photo Gallery/he/WLXMediaPublishSubscribe.dll.mui", "sizeBytes": 835776 },
+    { "relativePath": "Photo Gallery/he/WLXPhotoAcq.dll.mui", "sizeBytes": 1055944 },
+    { "relativePath": "Photo Gallery/he/WLXPhotoLibraryDuiResourcesLocalized.dll.mui", "sizeBytes": 1019592 },
+    { "relativePath": "Photo Gallery/he/WLXSendMail.dll.mui", "sizeBytes": 20160 },
+    { "relativePath": "Photo Gallery/he/WLXSlideshow.dll.mui", "sizeBytes": 224448 },
+    { "relativePath": "Photo Gallery/he/WLXVideoAcquireWizardResources.dll.mui", "sizeBytes": 104136 },
+    { "relativePath": "Photo Gallery/he/WLYouTubePlugin.resources.dll", "sizeBytes": 61128 },
+    { "relativePath": "Shared/he/uxctlloc.dll.mui", "sizeBytes": 32448 },
+    { "relativePath": "Shared/he/wliduxloc.dll.mui", "sizeBytes": 26816 }
+  ]
+}

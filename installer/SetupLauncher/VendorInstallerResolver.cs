@@ -8,7 +8,8 @@ namespace SetupLauncher
         {
             "MovieMaker2012-Base.exe",
             "Movie Maker 2012.exe",
-            "Move Maker 2012.exe"
+            "Move Maker 2012.exe",
+            "wlsetup-all.exe"
         };
 
         public static string Resolve(string packageRoot)

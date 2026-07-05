@@ -3,8 +3,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.IO.Compression;
-using System.Reflection;
 using System.Windows.Forms;
 
 namespace SetupLauncher
@@ -37,25 +35,26 @@ namespace SetupLauncher
         private string _packageRoot = string.Empty;
 
         private const int StepWelcome = 0;
-        private const int StepDestination = 1;
+        private const int StepLocationInfo = 1;
         private const int StepLanguage = 2;
         private const int StepReady = 3;
         private const int StepInstalling = 4;
         private const int StepFinish = 5;
 
-        public string SelectedLanguage { get; private set; } = "Hebrew";
-        public string InstallDirectory { get; private set; } = @"C:\Program Files (x86)\Windows Movie Maker";
+        public string SelectedLanguage { get; set; } = "Hebrew";
         public bool InstallationSucceeded { get; private set; }
 
         public SetupWizardForm()
         {
-            Text = "Setup - Windows Movie Maker";
+            Text = WizardStrings.WindowTitle;
+            RightToLeft = RightToLeft.Yes;
+            RightToLeftLayout = true;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             StartPosition = FormStartPosition.CenterScreen;
             MaximizeBox = false;
             MinimizeBox = false;
             ClientSize = new Size(503, 312);
-            Font = new Font("Tahoma", 8.25F);
+            Font = new Font("Segoe UI", 9F);
             BackColor = SystemColors.Control;
 
             _headerPanel = new Panel
@@ -71,7 +70,7 @@ namespace SetupLauncher
                 AutoSize = false,
                 Location = new Point(15, 8),
                 Size = new Size(420, 18),
-                Font = new Font("Tahoma", 8.25F, FontStyle.Bold),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold),
                 BackColor = Color.White
             };
 
@@ -124,12 +123,13 @@ namespace SetupLauncher
                 Location = new Point(55, 95),
                 Size = new Size(350, 21),
                 Visible = false,
-                Text = InstallDirectory
+                Text = @"C:\Program Files (x86)\Windows Live",
+                RightToLeft = RightToLeft.No
             };
 
             _browseButton = new Button
             {
-                Text = "Browse...",
+                Text = WizardStrings.Browse,
                 Location = new Point(410, 93),
                 Size = new Size(75, 23),
                 Visible = false
@@ -138,7 +138,7 @@ namespace SetupLauncher
 
             _hebrewRadio = new RadioButton
             {
-                Text = "Hebrew (עברית)",
+                Text = WizardStrings.HebrewOption,
                 Location = new Point(55, 95),
                 Size = new Size(350, 22),
                 Visible = false,
@@ -148,7 +148,7 @@ namespace SetupLauncher
 
             _englishRadio = new RadioButton
             {
-                Text = "English",
+                Text = WizardStrings.EnglishOption,
                 Location = new Point(55, 123),
                 Size = new Size(350, 22),
                 Visible = false,
@@ -163,13 +163,7 @@ namespace SetupLauncher
                 BorderStyle = BorderStyle.Fixed3D,
                 Enabled = false
             };
-            _readyList.Items.AddRange(new object[]
-            {
-                "Windows Movie Maker 2012",
-                "Windows Live Photo Gallery dependencies",
-                "DirectX runtime components",
-                "Selected language pack (Hebrew or English)"
-            });
+            _readyList.Items.AddRange(WizardStrings.ReadyComponents);
 
             _progressBar = new ProgressBar
             {
@@ -221,12 +215,12 @@ namespace SetupLauncher
                 Location = new Point(12, 18),
                 Size = new Size(220, 28),
                 ForeColor = Color.Gray,
-                Text = "COMMUNITY INSTALLER BY LIAD KADOSH\r\ngithub.com/liad07"
+                Text = WizardStrings.Credit
             };
 
             _backButton = new Button
             {
-                Text = "< Back",
+                Text = WizardStrings.Back,
                 Location = new Point(248, 14),
                 Size = new Size(75, 23),
                 Enabled = false
@@ -235,7 +229,7 @@ namespace SetupLauncher
 
             _nextButton = new Button
             {
-                Text = "Next >",
+                Text = WizardStrings.Next,
                 Location = new Point(329, 14),
                 Size = new Size(75, 23)
             };
@@ -243,7 +237,7 @@ namespace SetupLauncher
 
             _cancelButton = new Button
             {
-                Text = "Cancel",
+                Text = WizardStrings.Cancel,
                 Location = new Point(410, 14),
                 Size = new Size(75, 23)
             };
@@ -251,7 +245,7 @@ namespace SetupLauncher
 
             _finishButton = new Button
             {
-                Text = "Finish",
+                Text = WizardStrings.Finish,
                 Location = new Point(410, 14),
                 Size = new Size(75, 23),
                 Visible = false
@@ -341,89 +335,84 @@ namespace SetupLauncher
 
             if (stepIndex == StepWelcome)
             {
-                _headerTitleLabel.Text = "Welcome to the Windows Movie Maker Setup Wizard";
+                _headerTitleLabel.Text = WizardStrings.WelcomeTitle;
                 _headerSubtitleLabel.Text = string.Empty;
                 _bodyLabel.Location = new Point(20, 16);
                 _bodyLabel.Size = new Size(460, 120);
-                _bodyLabel.Text =
-                    "This will install Windows Movie Maker on your computer.\r\n\r\n" +
-                    "It is recommended that you close all other applications before continuing.\r\n\r\n" +
-                    "Click Next to continue, or Cancel to exit Setup.";
-                _nextButton.Text = "Next >";
+                _bodyLabel.Text = WizardStrings.WelcomeBody;
+                _nextButton.Text = WizardStrings.Next;
                 return;
             }
 
-            if (stepIndex == StepDestination)
+            if (stepIndex == StepLocationInfo)
             {
-                _headerTitleLabel.Text = "Select Destination Location";
-                _headerSubtitleLabel.Text = "Where should Windows Movie Maker be installed?";
+                _headerTitleLabel.Text = WizardStrings.LocationTitle;
+                _headerSubtitleLabel.Text = WizardStrings.LocationSubtitle;
                 _contentIconPanel.Visible = true;
-                _bodyLabel.Text =
-                    "Setup will install Windows Movie Maker into the following folder.\r\n\r\n" +
-                    "To continue, click Next. If you would like to select a different folder, click Browse.";
-                _directoryTextBox.Visible = true;
-                _browseButton.Visible = true;
-                _directoryTextBox.Text = InstallDirectory;
+                _bodyLabel.Text = WizardStrings.LocationBody;
                 _footerInfoLabel.Visible = true;
-                _footerInfoLabel.Text = "At least 83.4 MB of free disk space is required. Program files are also deployed under Program Files (x86)\\Windows Live.";
-                _nextButton.Text = "Next >";
+                _footerInfoLabel.Text = WizardStrings.LocationFooter;
+                _nextButton.Text = WizardStrings.Next;
                 return;
             }
 
             if (stepIndex == StepLanguage)
             {
-                _headerTitleLabel.Text = "Select Program Language";
-                _headerSubtitleLabel.Text = "Choose the language for Movie Maker.";
+                _headerTitleLabel.Text = WizardStrings.LanguageTitle;
+                _headerSubtitleLabel.Text = WizardStrings.LanguageSubtitle;
                 _contentIconPanel.Visible = true;
-                _bodyLabel.Text =
-                    "Select whether Movie Maker should run in Hebrew or English.\r\n\r\n" +
-                    "You can reinstall later to change this setting.";
+                _bodyLabel.Text = WizardStrings.LanguageBody;
                 _hebrewRadio.Visible = true;
                 _englishRadio.Visible = true;
-                _nextButton.Text = "Next >";
+                _nextButton.Text = WizardStrings.Next;
                 return;
             }
 
             if (stepIndex == StepReady)
             {
-                _headerTitleLabel.Text = "Ready to Install";
-                _headerSubtitleLabel.Text = "Setup is ready to begin installing Windows Movie Maker.";
+                _headerTitleLabel.Text = WizardStrings.ReadyTitle;
+                _headerSubtitleLabel.Text = WizardStrings.ReadySubtitle;
                 _contentIconPanel.Visible = true;
-                _bodyLabel.Text = "The following components will be installed. Click Install to continue.";
+                _bodyLabel.Text = WizardStrings.ReadyBody;
                 _bodyLabel.Size = new Size(430, 35);
                 _readyList.Visible = true;
-                _nextButton.Text = "Install";
+                _nextButton.Text = WizardStrings.Install;
                 return;
             }
 
             if (stepIndex == StepInstalling)
             {
-                _headerTitleLabel.Text = "Installing";
-                _headerSubtitleLabel.Text = "Please wait while Setup installs Windows Movie Maker on your computer.";
+                _headerTitleLabel.Text = WizardStrings.InstallingTitle;
+                _headerSubtitleLabel.Text = WizardStrings.InstallingSubtitle;
                 _bodyLabel.Location = new Point(20, 16);
                 _bodyLabel.Size = new Size(460, 40);
-                _bodyLabel.Text = "Setup is copying files and configuring Movie Maker. This may take a few minutes.";
+                _bodyLabel.Text = WizardStrings.InstallingBody;
                 _progressBar.Visible = true;
                 _statusLabel.Visible = true;
-                _statusLabel.Text = "Preparing installation...";
+                _statusLabel.Text = WizardStrings.InstallingStatus;
                 _backButton.Enabled = false;
                 _cancelButton.Enabled = false;
                 _nextButton.Enabled = false;
                 return;
             }
 
-            _headerTitleLabel.Text = "Completing the Windows Movie Maker Setup Wizard";
+            _headerTitleLabel.Text = WizardStrings.CompleteTitle;
             _headerSubtitleLabel.Text = string.Empty;
             _bodyLabel.Location = new Point(20, 16);
             _bodyLabel.Size = new Size(460, 120);
             _bodyLabel.Text = SelectedLanguage == "Hebrew"
-                ? "Windows Movie Maker has been installed in Hebrew.\r\n\r\nClick Finish to exit Setup."
-                : "Windows Movie Maker has been installed in English.\r\n\r\nClick Finish to exit Setup.";
+                ? WizardStrings.CompleteHebrew
+                : WizardStrings.CompleteEnglish;
             _backButton.Enabled = false;
             _cancelButton.Enabled = false;
             _nextButton.Visible = false;
             _finishButton.Visible = true;
             AcceptButton = _finishButton;
+        }
+
+        public void ShowStepForCapture(int stepIndex)
+        {
+            ShowStep(stepIndex);
         }
 
         private void BrowseButtonClick(object sender, EventArgs e)
@@ -450,10 +439,16 @@ namespace SetupLauncher
         {
             if (_stepIndex == StepWelcome)
             {
+                if (IsMovieMakerProcessRunning())
+                {
+                    MessageBox.Show(WizardStrings.RunningProcessWarning, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 if (IsMovieMakerInstalled())
                 {
                     var result = MessageBox.Show(
-                        "Windows Movie Maker appears to be already installed.\r\n\r\nContinue to repair or update the installation?",
+                        WizardStrings.AlreadyInstalledPrompt,
                         Text,
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Question);
@@ -466,16 +461,6 @@ namespace SetupLauncher
 
                 ShowStep(_stepIndex + 1);
                 return;
-            }
-
-            if (_stepIndex == StepDestination)
-            {
-                InstallDirectory = _directoryTextBox.Text.Trim();
-                if (string.IsNullOrWhiteSpace(InstallDirectory))
-                {
-                    MessageBox.Show("Please choose an installation folder.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
             }
 
             if (_stepIndex == StepLanguage)
@@ -494,6 +479,20 @@ namespace SetupLauncher
             {
                 ShowStep(_stepIndex + 1);
             }
+        }
+
+        private static bool IsMovieMakerProcessRunning()
+        {
+            var processNames = new[] { "MovieMaker", "WLXPhotoGallery", "PhotoGallery" };
+            foreach (var processName in processNames)
+            {
+                if (Process.GetProcessesByName(processName).Length > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool IsMovieMakerInstalled()
@@ -529,19 +528,27 @@ namespace SetupLauncher
 
         private void StartInstallation()
         {
-            var worker = new BackgroundWorker();
+            var worker = new BackgroundWorker { WorkerReportsProgress = true };
             worker.DoWork += InstallationWorkerDoWork;
+            worker.ProgressChanged += InstallationWorkerProgressChanged;
             worker.RunWorkerCompleted += InstallationWorkerCompleted;
             worker.RunWorkerAsync();
         }
 
+        private void InstallationWorkerProgressChanged(object sender, ProgressChangedEventArgs e)
+        {
+            if (e.UserState is string status && !string.IsNullOrWhiteSpace(status))
+            {
+                _statusLabel.Text = status;
+            }
+        }
+
         private void InstallationWorkerDoWork(object sender, DoWorkEventArgs e)
         {
+            var worker = (BackgroundWorker)sender;
             SetupLogger.Info("Installation started.");
-            SetupLogger.Info("Install directory: " + InstallDirectory);
             SetupLogger.Info("Selected language: " + SelectedLanguage);
-            RunMovieMakerSetup(_packageRoot, InstallDirectory);
-            ApplyLocalization(_packageRoot, SelectedLanguage, InstallDirectory);
+            RunInstallationScript(_packageRoot, SelectedLanguage, worker);
             SetupLogger.Info("Installation completed successfully.");
         }
 
@@ -551,7 +558,7 @@ namespace SetupLauncher
             {
                 SetupLogger.Error(e.Error.Message);
                 MessageBox.Show(
-                    e.Error.Message + "\r\n\r\nLog file:\r\n" + SetupLogger.LogFilePath,
+                    e.Error.Message + "\r\n\r\n" + WizardStrings.ErrorLogSuffix + SetupLogger.LogFilePath,
                     Text,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
@@ -564,46 +571,24 @@ namespace SetupLauncher
             ShowStep(StepFinish);
         }
 
-        private static void RunMovieMakerSetup(string packageRoot, string installDirectory)
-        {
-            var setupPath = VendorInstallerResolver.Resolve(packageRoot);
-            if (setupPath == null)
-            {
-                throw new InvalidOperationException("Movie Maker base installer was not found.");
-            }
-
-            SetupLogger.Info("Running base installer: " + setupPath);
-
-            var arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR=\"" + installDirectory + "\"";
-            var process = Process.Start(new ProcessStartInfo
-            {
-                FileName = setupPath,
-                Arguments = arguments,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            });
-
-            if (process == null)
-            {
-                throw new InvalidOperationException("Failed to start Movie Maker setup.");
-            }
-
-            process.WaitForExit();
-
-            if (process.ExitCode != 0)
-            {
-                throw new InvalidOperationException("Movie Maker setup failed with exit code " + process.ExitCode + ".");
-            }
-        }
-
-        private static void ApplyLocalization(string packageRoot, string language, string installDirectory)
+        private static void RunInstallationScript(string packageRoot, string language, BackgroundWorker worker)
         {
             var scriptPath = Path.Combine(packageRoot, "Install-HebrewMovieMaker.ps1");
-            var arguments = "-NoProfile -ExecutionPolicy Bypass -File \"" + scriptPath +
-                "\" -PackageRoot \"" + packageRoot + "\" -Language " + language +
-                " -InstallDirectory \"" + installDirectory + "\" -LocalizationOnly -NoPrompt";
+            if (!File.Exists(scriptPath))
+            {
+                throw new InvalidOperationException("Install-HebrewMovieMaker.ps1 was not found in the payload.");
+            }
 
-            SetupLogger.Info("Applying localization via PowerShell.");
+            var arguments = "-NoProfile -ExecutionPolicy Bypass -File \"" + scriptPath +
+                "\" -PackageRoot \"" + packageRoot + "\" -Language " + language + " -NoPrompt";
+
+            SetupLogger.Info("Running installation script via PowerShell.");
+
+            var progressPath = Path.Combine(Path.GetTempPath(), "MovieMaker2012-Hebrew-Setup.progress");
+            if (File.Exists(progressPath))
+            {
+                File.Delete(progressPath);
+            }
 
             var process = Process.Start(new ProcessStartInfo
             {
@@ -615,40 +600,27 @@ namespace SetupLauncher
 
             if (process == null)
             {
-                throw new InvalidOperationException("Failed to apply language settings.");
+                throw new InvalidOperationException("Failed to start installation script.");
             }
 
-            process.WaitForExit();
+            while (!process.WaitForExit(500))
+            {
+                if (!File.Exists(progressPath))
+                {
+                    continue;
+                }
+
+                var status = File.ReadAllText(progressPath).Trim();
+                if (!string.IsNullOrWhiteSpace(status))
+                {
+                    worker.ReportProgress(0, status);
+                }
+            }
 
             if (process.ExitCode != 0)
             {
-                throw new InvalidOperationException("Language configuration failed with exit code " + process.ExitCode + ".");
+                throw new InvalidOperationException("Installation failed with exit code " + process.ExitCode + ".");
             }
-        }
-
-        public static string ExtractPayload()
-        {
-            var extractRoot = Path.Combine(Path.GetTempPath(), "MovieMaker2012Hebrew", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(extractRoot);
-
-            using (var resourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("SetupLauncher.payload.zip"))
-            {
-                if (resourceStream == null)
-                {
-                    throw new InvalidOperationException("Embedded installer payload was not found.");
-                }
-
-                var zipPath = Path.Combine(extractRoot, "payload.zip");
-                using (var fileStream = File.Create(zipPath))
-                {
-                    resourceStream.CopyTo(fileStream);
-                }
-
-                ZipFile.ExtractToDirectory(zipPath, extractRoot);
-                File.Delete(zipPath);
-            }
-
-            return extractRoot;
         }
     }
 }

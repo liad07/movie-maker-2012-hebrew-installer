@@ -1,28 +1,36 @@
-# Base Windows Essentials / Movie Maker installer
+# Base Windows Movie Maker 2012 installer
 
-Place **your own legally obtained copy** of the legacy Windows Movie Maker 2012 offline installer in this folder.
+Place **your own legally obtained copy** of the legacy Windows Movie Maker 2012 offline installer in this folder using this exact file name:
 
-## Accepted file names
-
-```
+```text
 Movie Maker 2012.exe
-Move Maker 2012.exe
-wlsetup-all.exe
 ```
 
-The build script renames the file internally to `MovieMaker2012-Base.exe`.
+## Verified build requirement
 
-## Optional integrity check
-
-To verify the base installer before building, create `vendor/installer.sha256` containing a single SHA-256 line:
+Create `vendor/installer.sha256` containing one SHA-256 line for that file:
 
 ```powershell
-(Get-FileHash "vendor\Movie Maker 2012.exe" -Algorithm SHA256).Hash
+(Get-FileHash "vendor\Movie Maker 2012.exe" -Algorithm SHA256).Hash | Set-Content vendor\installer.sha256
 ```
 
-If `installer.sha256` exists, the build fails when the hash does not match.
+The build **fails** if:
+
+* the file is missing
+* the hash file is missing
+* the hash does not match
+
+During packaging the verified installer is renamed internally to `MovieMaker2012-Base.exe`.
+
+## Supported silent switches
+
+Only this verified base installer is executed, using tested Inno Setup switches:
+
+```text
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR="..."
+```
 
 ## Important
 
 This repository does **not** distribute Microsoft binaries.
-You must supply the base installer yourself for local builds.
+You must supply the base installer yourself for local builds and releases.
